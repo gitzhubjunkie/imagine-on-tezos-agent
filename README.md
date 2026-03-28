@@ -2,6 +2,23 @@
 
 ERC-721 NFT contract with dynamic chapter management deployed to Etherlink Shadownet.
 
+## Architecture Overview
+
+**Social stream → Curator agent**
+An off-chain AI curator listens to posts with #imagineontezos, cleans the text, and uses an LLM to extract themes, tone, quality score, and a short wall-text style description for each post.
+
+**AI image + IPFS pipeline**
+For posts above a quality threshold, the agent generates an image (stubbed or via diffusion), uploads the image to IPFS, and builds NFT metadata (name, description, image, attributes) that is also pinned to IPFS.
+
+**Etherlink identity contract (ERC‑721)**
+A custom ERC‑721 on Etherlink Shadownet stores each curated work as an NFT with promptHash and originalAuthor, plus an agent role that can append "chapters" (dynamic metadata URIs) to represent the evolution of a user's identity over time.
+
+**Decision engine: new work vs chapter**
+A small decision module compares the new post's normalized themes against the user's last onchain work; if similarity is high and chapter count is below a cap it calls addChapter, otherwise it calls mintTo to start a new onchain "period" in that identity.
+
+**Identity gallery frontend**
+A simple gallery UI on Etherlink lets users connect a wallet, browse their curated identity timeline (NFTs + chapters), and see AI-written curator texts that frame their Tezos practice as a living, evolving onchain exhibition rather than a one-off mint.
+
 ## Setup
 
 ### 1. Install Dependencies

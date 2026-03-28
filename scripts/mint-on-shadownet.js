@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 
 async function main() {
   // 1. Set your deployed contract address here
-  const contractAddress = "0x809C80151BaC0EA548a05d090ef61DE0b137D7d9";
+  const contractAddress = "0x8f405FC638505575e4A4Ea91a1BCd7a38bDc2b37";
 
   // 2. Get signer (uses your ETHERLINK_PRIVATE_KEY from hardhat.config)
   const [signer] = await ethers.getSigners();

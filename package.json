@@ -15,6 +15,10 @@
     "hardhat": "^2.28.6"
   },
   "dependencies": {
-    "dotenv": "^17.3.1"
+    "axios": "^1.14.0",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.3.1",
+    "form-data": "^4.0.5",
+    "openai": "^6.33.0"
   }
 }
