@@ -95,6 +95,42 @@ function extractHashtags(text) {
   return matches ? matches.map((h) => h.slice(1)) : [];
 }
 
+// ── og:image scraper (no auth, gets images) ─────────────
+
+/**
+ * Fetch tweet media via vxtwitter public API (no auth required).
+ * Returns { imageUrl, media[] } or null.
+ */
+async function fetchTweetMedia(tweetUrl) {
+  try {
+    // vxtwitter returns full media URLs without authentication
+    const vxUrl = tweetUrl.replace(
+      /https?:\/\/(x\.com|twitter\.com)/,
+      "https://api.vxtwitter.com"
+    );
+    const res = await axios.get(vxUrl, { timeout: 8000 });
+    const data = res.data;
+    if (!data) return null;
+
+    const media = (data.media_extended || [])
+      .filter((m) => m.url)
+      .map((m) => ({
+        type: m.type === "image" ? "photo" : m.type,
+        url: m.url,
+      }));
+
+    const imageUrl =
+      media.find((m) => m.type === "photo")?.url ||
+      (data.mediaURLs && data.mediaURLs[0]) ||
+      null;
+
+    return { imageUrl, media };
+  } catch (e) {
+    console.warn(`[xClient] vxtwitter media fetch failed: ${e.message}`);
+    return null;
+  }
+}
+
 // ── v2 API (bearer, optional) ───────────────────────────
 
 const TWEET_FIELDS = "created_at,author_id,text,attachments,entities";
@@ -156,39 +192,14 @@ function normalizeV2Response(apiResponse, tweetId) {
 // ── Public API ──────────────────────────────────────────
 
 /**
- * Look up a tweet — oEmbed first (no auth), v2 fallback (if bearer set).
+ * Look up a tweet — v2 first (gets media), oEmbed fallback (no auth).
  * Always returns a normalized tweet object.
  */
 async function lookupTweet(tweetId, tweetUrl) {
   const url = tweetUrl || canonicalUrl("i", tweetId);
   const username = parseUsername(url) || "i";
 
-  // 1. oEmbed first — no auth, most stable
-  try {
-    const oembed = await fetchOEmbed(url);
-    const text = extractTextFromOEmbed(oembed.html);
-    const handle = extractAuthorHandle(oembed.author_url) || username;
-    const hashtags = extractHashtags(text);
-
-    console.log(`[xClient] oEmbed success for ${tweetId}`);
-    return {
-      tweetId,
-      tweetUrl: canonicalUrl(handle, tweetId),
-      authorHandle: handle,
-      authorName: oembed.author_name || handle,
-      authorAvatar: null, // oEmbed doesn't include avatar
-      text,
-      createdAt: null, // oEmbed doesn't include timestamp
-      hashtags,
-      imageUrl: null, // oEmbed doesn't include media URLs
-      media: [],
-      _source: "oembed",
-    };
-  } catch (e) {
-    console.warn(`[xClient] oEmbed failed (${e.message}), trying v2…`);
-  }
-
-  // 2. v2 fallback — needs bearer, can 503
+  // 1. v2 first — returns media/avatar/timestamps
   if (BEARER_TOKEN) {
     try {
       const data = await fetchV2(tweetId);
@@ -202,16 +213,49 @@ async function lookupTweet(tweetId, tweetUrl) {
         );
       } else if (status === 503) {
         console.warn(
-          `[xClient] v2 returned 503 (known X platform issue), degrading`
+          `[xClient] v2 returned 503 (known X platform issue), trying oEmbed…`
         );
       } else {
-        console.error(`[xClient] v2 failed: ${e.message}`);
+        console.error(`[xClient] v2 failed: ${e.message}, trying oEmbed…`);
       }
     }
   }
 
+  // 2. oEmbed fallback — no auth, most stable, but no media
+  try {
+    const oembed = await fetchOEmbed(url);
+    const text = extractTextFromOEmbed(oembed.html);
+    const handle = extractAuthorHandle(oembed.author_url) || username;
+    const hashtags = extractHashtags(text);
+    const tweetUrlNorm = canonicalUrl(handle, tweetId);
+
+    // Enrich with media via vxtwitter (no auth, gets actual image URLs)
+    const mediaData = await fetchTweetMedia(tweetUrlNorm);
+    if (mediaData?.imageUrl) {
+      console.log(`[xClient] oEmbed + vxtwitter image success for ${tweetId}`);
+    } else {
+      console.log(`[xClient] oEmbed success (no image) for ${tweetId}`);
+    }
+
+    return {
+      tweetId,
+      tweetUrl: tweetUrlNorm,
+      authorHandle: handle,
+      authorName: oembed.author_name || handle,
+      authorAvatar: null,
+      text,
+      createdAt: null,
+      hashtags,
+      imageUrl: mediaData?.imageUrl || null,
+      media: mediaData?.media || [],
+      _source: "oembed",
+    };
+  } catch (e) {
+    console.warn(`[xClient] oEmbed failed: ${e.message}`);
+  }
+
   throw new Error(
-    "Unable to fetch tweet — both oEmbed and v2 API failed. The post may be deleted, private, or X services are down."
+    "Unable to fetch tweet — both v2 API and oEmbed failed. The post may be deleted, private, or X services are down."
   );
 }
 

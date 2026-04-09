@@ -143,7 +143,7 @@ function buildMetadata(tweet, ai, imageUri, animationUri) {
       { trait_type: "Author", value: `${authorPrefix}${author}` },
       { trait_type: "Motion", value: ai.motionMode || "calm" },
       { trait_type: "Epoch", display_type: "number", value: ai.epochState || 1 },
-      ...(ai.keywords || []).map((k) => ({ trait_type: "Keyword", value: k })),
+      ...(Array.isArray(ai.keywords) ? ai.keywords : typeof ai.keywords === "string" ? ai.keywords.split(/,\s*/) : []).map((k) => ({ trait_type: "Keyword", value: k })),
       ...(tweet.hashtags || [])
         .filter((h) => h.toLowerCase() !== "imagineontezos")
         .map((h) => ({ trait_type: "Tag", value: `#${h}` })),

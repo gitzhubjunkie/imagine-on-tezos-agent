@@ -44,7 +44,7 @@ contract ImagineOnTezosIdentity is ERC721, Ownable {
         uint256 newId = _tokenIdCounter;
         _tokenIdCounter = newId + 1;
 
-        _safeMint(to, newId);
+        _mint(to, newId);
 
         _tokenURIs[newId] = uri;
         promptHash[newId] = promptHash_;

@@ -17,7 +17,7 @@ async function main() {
 
   const identityAddr = process.env.IDENTITY_CONTRACT
     || process.env.VITE_CONTRACT_ADDRESS
-    || "0x6941C878657BE2bebe6BE7C339A282383D5C186A";
+    || "0xee1B97BC33A239EF0edf22D93b44c9a5CBB49B54";
 
   console.log("Identity contract:", identityAddr);
 

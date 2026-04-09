@@ -1,15 +1,48 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Component } from "react";
 import { JsonRpcProvider, Contract } from "ethers";
 import abi from "./contractABI.json";
 import "./App.css";
 
+// ─── Error boundary ────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, color: "#ff6b6b", background: "#1a1a1a", minHeight: "100vh" }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ whiteSpace: "pre-wrap", color: "#e0e0e0" }}>
+            {this.state.error.message}
+          </pre>
+          <pre style={{ whiteSpace: "pre-wrap", color: "#888", fontSize: 12 }}>
+            {this.state.error.stack}
+          </pre>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+            style={{ marginTop: 20, padding: "8px 16px", cursor: "pointer" }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const NETWORK = {
-  chainId: "0x1f30f",
+  chainId: "0x1f34f",
   chainIdDec: 127823,
   chainName: "Etherlink Shadownet",
   rpcUrls: ["https://node.shadownet.etherlink.com"],
   nativeCurrency: { name: "XTZ", symbol: "XTZ", decimals: 18 },
-  blockExplorerUrls: ["https://explorer.shadownet.etherlink.com"],
+  blockExplorerUrls: ["https://shadownet.explorer.etherlink.com"],
 };
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "";
@@ -67,12 +100,15 @@ function useWallet() {
   const [onCorrectChain, setOnCorrectChain] = useState(false);
   const [err, setErr] = useState(null);
 
-  // Check current chain
+  // Check current chain (case-insensitive hex compare)
+  const isCorrectChain = (chainId) =>
+    chainId?.toLowerCase() === NETWORK.chainId.toLowerCase();
+
   async function checkChain() {
     if (!window.ethereum) return;
     try {
       const chainId = await window.ethereum.request({ method: "eth_chainId" });
-      setOnCorrectChain(chainId === NETWORK.chainId);
+      setOnCorrectChain(isCorrectChain(chainId));
     } catch {}
   }
 
@@ -80,7 +116,7 @@ function useWallet() {
   useEffect(() => {
     if (!window.ethereum) return;
     const handleChain = (chainId) => {
-      setOnCorrectChain(chainId === NETWORK.chainId);
+      setOnCorrectChain(isCorrectChain(chainId));
     };
     const handleAccounts = (accs) => {
       setAccount(accs[0] || null);
@@ -140,6 +176,7 @@ function useWallet() {
         method: "wallet_switchEthereumChain",
         params: [{ chainId: NETWORK.chainId }],
       });
+      setOnCorrectChain(true);
     } catch (e) {
       if (e.code === 4902) {
         await window.ethereum.request({
@@ -152,6 +189,7 @@ function useWallet() {
             blockExplorerUrls: NETWORK.blockExplorerUrls,
           }],
         });
+        setOnCorrectChain(true);
       }
     }
   }
@@ -407,8 +445,8 @@ function MintForm({ account, onCorrectChain, switchChain, onMinted }) {
 
 // ─── AI Interpretation card (enhanced for multi-agent panel) ────
 function InterpretationCard({ ai }) {
+  const [showPanel, setShowPanel] = useState(false);
   if (!ai) return null;
-  const [showPanel, setShowPanel] = React.useState(false);
   const panel = ai._panel;
 
   return (
@@ -422,7 +460,7 @@ function InterpretationCard({ ai }) {
         {ai.texture && <span className="ai-chip ai-chip--texture">{ai.texture}</span>}
         {ai.narrativeArc && <span className="ai-chip ai-chip--arc">{ai.narrativeArc}</span>}
       </div>
-      {ai.palette && (
+      {Array.isArray(ai.palette) && (
         <div className="ai-palette">
           {ai.palette.map((c, i) => (
             <span key={i} className="ai-swatch" style={{ background: c }} title={c} />
@@ -432,14 +470,14 @@ function InterpretationCard({ ai }) {
       {ai.curatorStatement && (
         <blockquote className="ai-curator-statement">{ai.curatorStatement}</blockquote>
       )}
-      {ai.resonances?.length > 0 && (
+      {Array.isArray(ai.resonances) && ai.resonances.length > 0 && (
         <div className="ai-resonances">
           {ai.resonances.map((r, i) => (
             <span key={i} className="ai-resonance">{r}</span>
           ))}
         </div>
       )}
-      {ai.keywords && (
+      {Array.isArray(ai.keywords) && (
         <div className="ai-keywords">
           {ai.keywords.map((k, i) => (
             <span key={i} className="ai-kw">{k}</span>
@@ -479,7 +517,7 @@ function InterpretationCard({ ai }) {
                 <div className="ai-meta">
                   <span className="ai-chip">{panel.pattern?.epochSignal}</span>
                 </div>
-                {panel.pattern?.resonances?.length > 0 && (
+                {Array.isArray(panel.pattern?.resonances) && panel.pattern.resonances.length > 0 && (
                   <div className="ai-resonances">
                     {panel.pattern.resonances.map((r, i) => (
                       <span key={i} className="ai-resonance">{r}</span>
@@ -496,9 +534,20 @@ function InterpretationCard({ ai }) {
 }
 
 // ─── Tweet card (preview + gallery + modal) ─────────────
+function cleanTweetText(text) {
+  if (!text) return "";
+  return text
+    .replace(/\s*https?:\/\/t\.co\/\w+/gi, "")
+    .replace(/\s*pic\.twitter\.com\/\w+/gi, "")
+    .trim();
+}
+
 function TweetCard({ tweet, compact }) {
   if (!tweet) return null;
   const t = tweet;
+  const mediaItems = Array.isArray(t.media) && t.media.length > 0
+    ? t.media.filter((m) => m.url)
+    : t.imageUrl ? [{ url: t.imageUrl, type: "photo" }] : [];
   return (
     <div className={`tweet-card${compact ? " tweet-card--compact" : ""}`}>
       <div className="tweet-header">
@@ -523,9 +572,13 @@ function TweetCard({ tweet, compact }) {
           </a>
         )}
       </div>
-      <p className="tweet-text">{t.text}</p>
-      {t.imageUrl && (
-        <img className="tweet-media" src={t.imageUrl} alt="" loading="lazy" />
+      <p className="tweet-text">{cleanTweetText(t.text)}</p>
+      {mediaItems.length > 0 && (
+        <div className={`tweet-media-grid tweet-media-grid--${Math.min(mediaItems.length, 4)}`}>
+          {mediaItems.map((m, i) => (
+            <img key={i} className="tweet-media" src={m.url} alt="" loading="lazy" />
+          ))}
+        </div>
       )}
       {(t.createdAt || t.created_at) && (
         <time className="tweet-time">
@@ -666,7 +719,7 @@ function Card({ token, onSelect, isSelected }) {
 
 // ─── Detail modal ───────────────────────────────────────
 function Detail({ token, onClose }) {
-  const [artifactUrl, setArtifactUrl] = React.useState(null);
+  const [artifactUrl, setArtifactUrl] = useState(null);
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
@@ -920,7 +973,7 @@ function FeedItem({ tweet, interpretations, onInterpret }) {
         <div className="feed-ai-summary">
           <strong className="feed-ai-title">{ai.title}</strong>
           <p className="feed-ai-desc">{ai.summary}</p>
-          {ai.keywords && (
+          {Array.isArray(ai.keywords) && (
             <div className="ai-keywords">
               {ai.keywords.map((k, i) => (
                 <span key={i} className="ai-kw">{k}</span>
@@ -1043,7 +1096,7 @@ function FeedView({ tweets, stats, loading, reload }) {
 }
 
 // ─── App ────────────────────────────────────────────────
-function App() {
+function AppInner() {
   const { account, err: walletErr, onCorrectChain, connect, switchChain } = useWallet();
   const { tokens, total, loading, error, reload } = useGallery();
   const [selected, setSelected] = useState(null);
@@ -1161,6 +1214,14 @@ function App() {
         <span>Etherlink Shadownet</span>
       </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   );
 }
 

@@ -730,10 +730,23 @@
   word-break: break-word;
 }
 
+.tweet-media-grid {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 0.6rem;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tweet-media-grid--1 { grid-template-columns: 1fr; }
+.tweet-media-grid--2 { grid-template-columns: 1fr 1fr; }
+.tweet-media-grid--3 { grid-template-columns: 1fr 1fr; }
+.tweet-media-grid--4 { grid-template-columns: 1fr 1fr; }
+
 .tweet-media {
   width: 100%;
-  border-radius: 10px;
-  margin-bottom: 0.6rem;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
 }
 
 .tweet-time {

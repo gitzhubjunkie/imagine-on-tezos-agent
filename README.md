@@ -11,10 +11,10 @@
 
 ```
 Network:    Etherlink Shadownet (Chain ID 127823)
-Contract:   0x6941C878657BE2bebe6BE7C339A282383D5C186A
+Contract:   0xee1B97BC33A239EF0edf22D93b44c9a5CBB49B54
 Owner:      0xcc50149446bf9036F9f5aDb6e089a32D458620d7
 Agent:      0xcc50149446bf9036F9f5aDb6e089a32D458620d7
-Explorer:   https://explorer.shadownet.etherlink.com/address/0x6941C878657BE2bebe6BE7C339A282383D5C186A
+Explorer:   https://shadownet.explorer.etherlink.com/address/0xee1B97BC33A239EF0edf22D93b44c9a5CBB49B54
 ```
 
 ---
@@ -166,7 +166,7 @@ X / Farcaster
 ### Prerequisites
 
 - Node.js v18+
-- An Etherlink Shadownet wallet with test XTZ ([faucet](https://faucet.etherlink.com/))
+- An Etherlink Shadownet wallet with test XTZ ([faucet](https://shadownet.faucet.etherlink.com/))
 - OpenAI API key (GPT‑4o‑mini + DALL‑E 3)
 - Pinata account for IPFS pinning
 
@@ -191,7 +191,7 @@ Edit `.env` with your keys:
 ETHERLINK_PRIVATE_KEY=0x<your_key>
 OPENAI_API_KEY=sk-...
 PINATA_JWT=eyJ...
-CONTRACT_ADDRESS=0x6941C878657BE2bebe6BE7C339A282383D5C186A
+CONTRACT_ADDRESS=0xee1B97BC33A239EF0edf22D93b44c9a5CBB49B54
 CONTRACT_OWNER_ADDRESS=0xcc50149446bf9036F9f5aDb6e089a32D458620d7
 MINT_TO_ADDRESS=0xcc50149446bf9036F9f5aDb6e089a32D458620d7
 ```

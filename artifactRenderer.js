@@ -17,7 +17,8 @@ function renderArtifactHtml({ sourcePost, ai }) {
   const escapedArchetype = escapeHtml(ai.archetype || "Unknown");
   const escapedSentiment = escapeHtml(ai.sentiment || "neutral");
   const escapedAuthor = escapeHtml(sourcePost.username || sourcePost.authorHandle || "anonymous");
-  const keywords = (ai.keywords || []).map(escapeHtml);
+  const rawKeywords = ai.keywords || [];
+  const keywords = (Array.isArray(rawKeywords) ? rawKeywords : String(rawKeywords).split(/,\s*/)).map(escapeHtml);
 
   return `<!DOCTYPE html>
 <html lang="en">

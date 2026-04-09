@@ -16,7 +16,7 @@ async function generatePreviewImage(visualPrompt, palette = [], label = "artifac
   try {
     const res = await openai.images.generate({
       model: "dall-e-3",
-      prompt: `Abstract digital art, minimal and geometric. ${visualPrompt} Color palette: ${palette.slice(0, 3).join(", ")}. No text, no words, no letters, no watermarks.`,
+      prompt: `Generate a highly detailed digital illustration in the style of a surreal, crypto-native pop-art triptych, featuring an original anthropomorphic frog character clearly distinct from existing memes, with elongated limbs, exaggerated cartoon features, and a slightly melancholic but ironic expression, standing as a central narrator of internet culture inside a glowing, cathedral-like data center filled with LED screens and holographic billboards. ${visualPrompt} Color palette: ${palette.slice(0, 3).join(", ")}. No text, no words, no letters, no watermarks.`,
       n: 1,
       size: "1024x1024",
       response_format: "url",

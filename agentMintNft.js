@@ -41,7 +41,7 @@ async function mintNft(to, promptText, tokenURI) {
   const lastTokenId = current - 1n;
 
   console.log("Minted tokenId:", lastTokenId.toString());
-  return { txHash: tx.hash, tokenId: lastTokenId };
+  return { txHash: tx.hash, tokenId: lastTokenId.toString() };
 }
 
 // Example CLI run
