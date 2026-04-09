@@ -243,8 +243,7 @@ test/
 
 ## Team
 
-<!-- Replace with your info -->
-- **Builder:** [@gitzhubjunkie](https://github.com/gitzhubjunkie)
+- **Dorian Batycka** — [@temp_projects](https://x.com/temp_projects)
 
 ---
 
