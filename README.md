@@ -74,6 +74,48 @@ An AI agent that reads an identity's full history (archetype shifts, sentiment a
 
 ---
 
+## ERC‑8211 Smart Batching Integration
+
+The project implements **[ERC‑8211 (Smart Batching)](https://github.com/ethereum/ERCs/pull/1638)** — a composable transaction execution standard that enables atomic multi‑step operations with dynamic parameter resolution. This turns what would normally require multiple separate transactions into a single, verifiable batch.
+
+### Why Smart Batching?
+
+| Problem | Smart Batching Solution |
+|---|---|
+| Minting + adding a chapter requires 2 transactions | `batchMintAndChapter()` — atomic in one call |
+| No way to gate minting on chain state | `predicatedMintAndChapter()` — supply‑capped minting with on‑chain predicate |
+| Static parameters only | `executeComposable()` — dynamic resolution via `STATIC_CALL` / `BALANCE` fetchers |
+| No inter‑step data passing | `SmartBatchStorage` — namespaced key‑value store for captured return values |
+
+### Contracts
+
+| Contract | Purpose |
+|---|---|
+| `IComposableExecution.sol` | ERC‑8211 data types (`ComposableExecution`, `InputParam`, `OutputParam`, `Constraint`) and interface |
+| `SmartBatchStorage.sol` | Namespaced key‑value store for passing data between batch steps |
+| `ComposableExecutionLib.sol` | Shared execution engine — the normative 3‑step algorithm (resolve → execute → capture) |
+| `ImagineSmartBatchAdapter.sol` | Adapter wrapping `ImagineOnTezosIdentity`: set as both owner and agent, exposes `executeComposable()` + convenience methods |
+
+### Supported Features
+
+- **Input parameter fetchers:** `RAW_BYTES`, `STATIC_CALL`, `BALANCE`
+- **Output parameter capture:** `EXEC_RESULT`, `STATIC_CALL`
+- **Constraints:** `EQ`, `GTE`, `LTE`, `IN` — validated before execution proceeds
+- **Predicate entries:** target = `address(0)` skips the call but still resolves + validates (supply gates, state checks)
+- **Reentrancy protection:** `ReentrancyGuard` on the adapter
+
+### Usage
+
+```bash
+# Deploy the adapter (transfers identity ownership + agent)
+npx hardhat run scripts/deploy-smart-batch.js --network etherlink-shadownet
+
+# Run the demo (3 flows: batch, predicated, composable)
+npx hardhat run scripts/smart-batch-demo.js --network etherlink-shadownet
+```
+
+---
+
 ## Architecture
 
 ```
@@ -163,7 +205,7 @@ npx hardhat run scripts/deploy.js --network etherlink
 ### 4. Run Tests
 
 ```bash
-npx hardhat test        # 21 contract tests
+npx hardhat test        # 34 contract tests (21 core + 13 Smart Batching)
 ```
 
 ### 5. Start the Server
@@ -200,7 +242,7 @@ npm run dev             # Vite dev server on http://localhost:5173
 
 | Layer | Technology |
 |---|---|
-| Smart contract | Solidity 0.8.26, OpenZeppelin 5.x, Hardhat |
+| Smart contract | Solidity 0.8.26, OpenZeppelin 5.x, Hardhat, ERC‑8211 Smart Batching |
 | Blockchain | Etherlink Shadownet (Tezos EVM L2) |
 | AI interpretation | OpenAI GPT‑4o‑mini (JSON mode, temperature 0.3) |
 | Image generation | DALL‑E 3 (1024×1024) |
@@ -214,8 +256,13 @@ npm run dev             # Vite dev server on http://localhost:5173
 ## Project Structure
 
 ```
-contracts/                  # Solidity smart contract
+contracts/                  # Solidity smart contracts
   ImagineOnTezosIdentity.sol
+  smartbatching/
+    IComposableExecution.sol        # ERC‑8211 types + interface
+    SmartBatchStorage.sol           # Namespaced key‑value store
+    ComposableExecutionLib.sol      # Shared execution engine
+    ImagineSmartBatchAdapter.sol    # Adapter wrapping identity contract
 curatorPanel.js             # Multi‑agent curatorial panel (Curated Labs)
 aiInterpreter.js            # Single‑agent interpreter (legacy/fallback)
 wallTextGenerator.js        # Exhibition wall text generator
@@ -234,8 +281,12 @@ farcasterClient.js          # Farcaster client (Neynar Hub API)
 scheduler.js                # X ingestion scheduler
 farcasterScheduler.js       # Farcaster ingestion scheduler
 frontend/                   # React gallery + mint form
+scripts/
+  deploy-smart-batch.js     # Deploy Smart Batching adapter
+  smart-batch-demo.js       # Demo: batch, predicated, composable flows
 test/
-  ImagineOnTezosIdentity.js # 21 contract tests
+  ImagineOnTezosIdentity.js # 21 core contract tests
+  SmartBatching.js          # 13 ERC‑8211 Smart Batching tests
   decisionLogic.js          # Decision engine tests
 ```
 
