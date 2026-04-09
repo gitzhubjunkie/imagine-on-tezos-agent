@@ -1,226 +1,252 @@
-# ImagineOnTezosIdentity
+# Imagine on Tezos — AI‑Curated Identity Gallery on Etherlink
 
-ERC-721 NFT contract with dynamic chapter management deployed to Etherlink Shadownet.
+> **Hackathon submission: [Tezos EVM × AI Hackathon](https://tezosevm.nowmedia.co/)**
+> **Track: AI Agents / Gaming & NFTs / Social & Identity**
 
-## Architecture Overview
+**Imagine on Tezos** is an autonomous AI curatorial system that transforms social media posts tagged **#imagineontezos** into dynamic, evolving NFT identity portraits on Etherlink. A multi‑agent "Curated Labs" panel — three specialized AI curators plus a chief synthesizer — reads each post through chromatic, narrative, and pattern lenses, then mints a three‑layer NFT: DALL‑E generated abstract art, animated HTML artifact, and rich onchain metadata. Over time, the system tracks each author's identity evolution — archetype drift, sentiment arcs, epoch transitions — building a living gallery of the Tezos community's collective creative identity.
 
-**Social stream → Curator agent**
-An off-chain AI curator listens to posts with #imagineontezos, cleans the text, and uses an LLM to extract themes, tone, quality score, and a short wall-text style description for each post.
+---
 
-**AI image + IPFS pipeline**
-For posts above a quality threshold, the agent generates an image (stubbed or via diffusion), uploads the image to IPFS, and builds NFT metadata (name, description, image, attributes) that is also pinned to IPFS.
+## Deployed Contract
 
-**Etherlink identity contract (ERC‑721)**
-A custom ERC‑721 on Etherlink Shadownet stores each curated work as an NFT with promptHash and originalAuthor, plus an agent role that can append "chapters" (dynamic metadata URIs) to represent the evolution of a user's identity over time.
+```
+Network:    Etherlink Shadownet (Chain ID 127823)
+Contract:   0x6941C878657BE2bebe6BE7C339A282383D5C186A
+Owner:      0xcc50149446bf9036F9f5aDb6e089a32D458620d7
+Agent:      0xcc50149446bf9036F9f5aDb6e089a32D458620d7
+Explorer:   https://explorer.shadownet.etherlink.com/address/0x6941C878657BE2bebe6BE7C339A282383D5C186A
+```
 
-**Decision engine: new work vs chapter**
-A small decision module compares the new post's normalized themes against the user's last onchain work; if similarity is high and chapter count is below a cap it calls addChapter, otherwise it calls mintTo to start a new onchain "period" in that identity.
+---
 
-**Identity gallery frontend**
-A simple gallery UI on Etherlink lets users connect a wallet, browse their curated identity timeline (NFTs + chapters), and see AI-written curator texts that frame their Tezos practice as a living, evolving onchain exhibition rather than a one-off mint.
+## How AI is Integrated
 
-## Setup
+This project is built around **AI as the core creative engine**, not a bolt‑on. Every NFT minted is the product of AI agents making curatorial decisions:
 
-### 1. Install Dependencies
+### 1. Multi‑Agent Curatorial Panel ("Curated Labs")
+
+Three specialized GPT‑4o‑mini agents run **in parallel** on every incoming post:
+
+| Agent | Lens | Output |
+|---|---|---|
+| **Chromatic Agent** | Visual/aesthetic | Palette (5 hex), texture, motion mode, abstract visual prompt |
+| **Narrative Agent** | Story/meaning | Archetype (8 types), sentiment (8 types), title, summary, narrative arc |
+| **Pattern Agent** | Cross‑identity | Keywords, themes, cultural resonances, epoch signal |
+
+A **Chief Curator** agent then synthesizes all three readings into a unified interpretation — resolving conflicts, enriching the visual prompt with narrative context, and producing a gallery‑quality curator statement.
+
+**Files:** `curatorPanel.js`, `llmClient.js`
+
+### 2. AI‑Generated Art & Artifacts
+
+- **DALL‑E 3** generates a unique abstract identity portrait from the Chromatic Agent's visual prompt + palette
+- **`artifactRenderer.js`** creates a self‑contained HTML animation (`animation_url`) with motion CSS, archetype glyphs, and palette gradients
+- Both are pinned to IPFS before minting
+
+**Files:** `imagePipeline.js`, `artifactRenderer.js`
+
+### 3. Evolving Identity Profiles
+
+The system maintains an **identity memory** per author — tracking archetype drift, sentiment trajectories, resonance accumulation, and epoch state across all their mints. This prior context is fed back into the curatorial panel, so each new interpretation is informed by the author's full onchain history.
+
+**Files:** `identityStore.js`, `db/identityDb.js`
+
+### 4. AI Decision Engine
+
+A decision module determines whether a new post should become a **new NFT** (new creative period) or a **chapter** appended to an existing token (continuation). It uses Jaccard similarity on AI‑extracted themes, not keyword matching.
+
+**Files:** `decideAndActOnPost.js`, `curatePost.js`
+
+### 5. Curatorial Wall Text Generator
+
+An AI agent that reads an identity's full history (archetype shifts, sentiment arcs, accumulated resonances) and produces exhibition‑quality wall text — the kind you'd see at MoMA or Tate, contextualizing a body of work for gallery visitors.
+
+**Files:** `wallTextGenerator.js`
+
+---
+
+## How Etherlink (Tezos EVM) is Integrated
+
+- **Smart contract** — `ImagineOnTezosIdentity.sol`: custom ERC‑721 (Solidity 0.8.26, OpenZeppelin 5.x) with per‑token URI, `promptHash`, `originalAuthor`, agent role, and dynamic chapters. Deployed via Hardhat to Etherlink Shadownet.
+- **Onchain identity evolution** — the `addChapter()` function lets the AI agent append new metadata URIs to existing tokens, representing how an author's identity transforms over time — an entirely onchain record of creative evolution.
+- **500ms finality** — Etherlink's fast confirmation enables real‑time mint flow: paste URL → AI interprets → mint onchain → confirmation, all in a single user interaction.
+- **All transactions** use Etherlink Shadownet RPC (`https://node.shadownet.etherlink.com`), chain ID `127823`.
+
+---
+
+## Architecture
+
+```
+X / Farcaster
+    │  #imagineontezos posts
+    ▼
+┌─────────────┐     ┌──────────────────────────────┐
+│  Schedulers  │────▶│  SQLite State Machine         │
+│  (X + FC)    │     │  discovered → eligible → ...  │
+└─────────────┘     └──────────┬───────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Curatorial Panel    │
+                    │  ┌────────────────┐  │
+                    │  │ Chromatic Agent │  │
+                    │  │ Narrative Agent │──┼──▶ Chief Curator ──▶ Unified Reading
+                    │  │ Pattern  Agent  │  │
+                    │  └────────────────┘  │
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │  Render Pipeline      │
+                    │  DALL‑E 3 → image     │
+                    │  HTML → artifact      │
+                    │  JSON → metadata      │
+                    │  All pinned to IPFS   │
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │  Etherlink Contract   │
+                    │  mintTo() / addChap() │
+                    │  ERC‑721 on Shadownet │
+                    └──────────────────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │  React Gallery        │
+                    │  Identity cards +     │
+                    │  panel readings +     │
+                    │  live mint form       │
+                    └──────────────────────┘
+```
+
+---
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js v18+
+- An Etherlink Shadownet wallet with test XTZ ([faucet](https://faucet.etherlink.com/))
+- OpenAI API key (GPT‑4o‑mini + DALL‑E 3)
+- Pinata account for IPFS pinning
+
+### 1. Clone & Install
 
 ```bash
+git clone https://github.com/gitzhubjunkie/imagine-on-tezos-agent.git
+cd imagine-on-tezos-agent
 npm install
+cd frontend && npm install && cd ..
 ```
 
 ### 2. Configure Environment
-
-Copy `.env.example` to `.env` and add your credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your Etherlink Shadownet deployer private key and RPC URL:
+Edit `.env` with your keys:
 
 ```
-DEPLOYER_PRIVATE_KEY=0x<your_private_key>
-ETHERLINK_RPC_URL=https://node.shadownet.etherlink.com
+ETHERLINK_PRIVATE_KEY=0x<your_key>
+OPENAI_API_KEY=sk-...
+PINATA_JWT=eyJ...
+CONTRACT_ADDRESS=0x6941C878657BE2bebe6BE7C339A282383D5C186A
+CONTRACT_OWNER_ADDRESS=0xcc50149446bf9036F9f5aDb6e089a32D458620d7
+MINT_TO_ADDRESS=0xcc50149446bf9036F9f5aDb6e089a32D458620d7
 ```
 
-## Contract Features
-
-### Core ERC-721
-- Standard NFT minting with `mintTo(address, tokenURI, bytes32 promptHash)`
-- Owner-only minting
-- Base URI configuration
-
-### Dynamic Chapters Hook
-- `mapping(uint256 => string[]) chapters` - Store chapter URIs per token
-- `addChapter(uint256 tokenId, string chapterURI)` - Agent can append chapters
-- `getChapters(uint256 tokenId)` - Retrieve all chapters for a token
-
-### Agent Management
-- `setAgent(address)` - Owner sets which address can add chapters
-- `addChapter()` - Restricted to agent address only
-
-## Scripts
-
-### Deploy to Etherlink Shadownet
+### 3. Deploy Contract (or use the existing one)
 
 ```bash
 npx hardhat run scripts/deploy.js --network etherlink
 ```
 
-Output includes:
-- Contract address
-- Agent address (initially the deployer)
-
-### Mint an NFT
+### 4. Run Tests
 
 ```bash
-npx hardhat run scripts/mint.js --network etherlink -- <contractAddress> <toAddress> [promptText]
+npx hardhat test        # 21 contract tests
 ```
 
-Example:
-```bash
-npx hardhat run scripts/mint.js --network etherlink -- 0x1234... 0x5678... "A beautiful portrait"
-```
-
-### Add a Chapter
+### 5. Start the Server
 
 ```bash
-npx hardhat run scripts/add-chapter.js --network etherlink -- <contractAddress> <tokenId> <chapterURI>
+node server.js          # API on http://localhost:3001
 ```
 
-Example:
-```bash
-npx hardhat run scripts/add-chapter.js --network etherlink -- 0x1234... 0 "https://example.com/chapter-1"
-```
-
-## Testing
-
-Run local Hardhat tests:
+### 6. Start the Frontend
 
 ```bash
-npx hardhat test
+cd frontend
+npm run dev             # Vite dev server on http://localhost:5173
 ```
 
-Tests cover:
-- Deployment
-- Minting with prompt hash storage
-- Owner-only access control
-- Agent setup
-- Chapter addition with agent restrictions
-- Multiple chapters per token
+---
 
-## Network Configuration
+## API Endpoints
 
-**Etherlink Shadownet**
-- Chain ID: 127823
-- RPC: https://node.shadownet.etherlink.com
-- Network: `etherlink` (in hardhat.config.js)
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/resolve-tweet` | Resolve X post by URL, validate #imagineontezos |
+| `POST` | `/api/resolve-cast` | Resolve Farcaster cast by Warpcast URL |
+| `POST` | `/api/interpret-post` | Multi‑agent AI curatorial interpretation |
+| `POST` | `/api/dynamic-mint` | Full pipeline: AI → image → artifact → IPFS → mint |
+| `GET` | `/api/identity/:handle` | Get evolving identity profile for an author |
+| `GET` | `/api/identity/:handle/wall-text` | Generate exhibition wall text for an identity |
+| `GET` | `/api/tweets` | Pipeline tweet list (filterable by status/source) |
+| `GET` | `/api/stats` | Scheduler and worker status |
 
-## Contract Addresses
+---
 
-Once deployed, update this section:
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Smart contract | Solidity 0.8.26, OpenZeppelin 5.x, Hardhat |
+| Blockchain | Etherlink Shadownet (Tezos EVM L2) |
+| AI interpretation | OpenAI GPT‑4o‑mini (JSON mode, temperature 0.3) |
+| Image generation | DALL‑E 3 (1024×1024) |
+| IPFS | Pinata |
+| Backend | Express 5, better‑sqlite3 |
+| Frontend | React 19, Vite 8, ethers 6 |
+| Social ingestion | X oEmbed API, Neynar Hub API (Farcaster) |
+
+---
+
+## Project Structure
 
 ```
-Network: Etherlink Shadownet
-Contract: 0x8f405FC638505575e4A4Ea91a1BCd7a38bDc2b37
-Agent: 0xcc50149446bf9036F9f5aDb6e089a32D458620d7
+contracts/                  # Solidity smart contract
+  ImagineOnTezosIdentity.sol
+curatorPanel.js             # Multi‑agent curatorial panel (Curated Labs)
+aiInterpreter.js            # Single‑agent interpreter (legacy/fallback)
+wallTextGenerator.js        # Exhibition wall text generator
+identityStore.js            # Evolving identity profiles
+imagePipeline.js            # DALL‑E 3 image generation + SVG fallback
+artifactRenderer.js         # HTML artifact builder (animation_url)
+decideAndActOnPost.js       # Decision engine: mint vs chapter
+curatePost.js               # LLM curator with theme normalization
+server.js                   # Express API server
+mintWorker.js               # Automated mint pipeline worker
+db/
+  identityDb.js             # SQLite schema (works + identity_profiles)
+  tweetStore.js             # Tweet pipeline state machine
+xClient.js                  # X/Twitter client (oEmbed + v2)
+farcasterClient.js          # Farcaster client (Neynar Hub API)
+scheduler.js                # X ingestion scheduler
+farcasterScheduler.js       # Farcaster ingestion scheduler
+frontend/                   # React gallery + mint form
+test/
+  ImagineOnTezosIdentity.js # 21 contract tests
+  decisionLogic.js          # Decision engine tests
 ```
 
-## Implementation Details
+---
 
-### 1. Curator agent (AI layer)
+## Team
 
-**File:** `curatePost.js`
+<!-- Replace with your info -->
+- **Builder:** [@gitzhubjunkie](https://github.com/gitzhubjunkie)
 
-`callCuratorLLM(rawText, handle)`
-- Uses OpenAI's Node SDK to call an LLM with a strict system prompt.
-- Returns JSON fields: `themes[]`, `tone`, `score`, `curatorDescription`.
-- Wrapped with:
-  - **Retry:** up to 3 attempts with exponential backoff.
-  - **Fallback:** if parsing fails, returns a heuristic default (`themes: ["general"]`, `score: 0.5`).
-
-**Theme normalization + score clamping:**
-
-- `normalizeThemeLabel(raw)` — Maps arbitrary LLM labels into an 8‑label vocabulary: `finance`, `governance`, `ai`, `art`, `tezos`, `landscape`, `identity`, `general`.
-- `normalizeThemes(rawThemes)` — Applies `normalizeThemeLabel` and deduplicates.
-- `clampScore(raw)` — Forces scores into a narrow range and supports test overrides (`[FORCE_SKIP]`, `[FORCE_CHAPTER]`) for deterministic behavior.
-
-The result is a stable, bounded input into the decision engine: small theme space, predictable scores, and no hard crashes on malformed JSON.
-
-### 2. Image + IPFS pipeline
-
-**Files:** `imagePipeline.js`, `pinataClient.js`
-
-`generateImageAndMetadata(input)`
-- Creates a placeholder PNG buffer (1×1 transparent) and uploads it to IPFS via Pinata (`pinFileBufferToIpfs`).
-- Builds ERC‑721 metadata JSON with: `name`, `description` (curator text), `image` (IPFS URI), `attributes` (handle, themes, tone, prompt, style).
-- Uploads metadata JSON via `pinJsonToIpfs` and returns: `imageUri`, `metadataUri`.
-
-`pinFileBufferToIpfs(buffer, filename)` / `pinJsonToIpfs(body, name)`
-- Thin wrappers over Pinata's REST API, authenticated with a JWT.
-- Return both the IPFS hash and a gateway URI.
-
-Swapping in a real diffusion or image API only requires changing the buffer generation; the IPFS + metadata logic remains identical.
-
-### 3. On‑chain identity contract
-
-**File:** `contracts/ImagineOnTezosIdentity.sol`
-
-Inherits `ERC721` + `Ownable`.
-
-**Storage:**
-- `mapping(uint256 => bytes32) public promptHash`
-- `mapping(uint256 => address) public originalAuthor`
-- `string private baseURI`
-- `address public agent`
-- `mapping(uint256 => string[]) public chapters`
-- `uint256 private _tokenIdCounter`
-
-**Key functions:**
-
-- `mintTo(address to, string tokenURI, bytes32 promptHash_) external onlyOwner` — Increments `_tokenIdCounter`, calls `_safeMint(to, newId)`, sets `promptHash` and `originalAuthor`, emits `Minted`.
-- `setAgent(address _agent) external onlyOwner` — Sets the off‑chain agent EOA allowed to append chapters, emits `AgentUpdated`.
-- `addChapter(uint256 tokenId, string chapterURI) external` — Requires `msg.sender == agent` and token exists. Appends `chapterURI` to `chapters[tokenId]`, emits `ChapterAdded`.
-- **View helpers:** `getChapterCount(tokenId)`, `getChapter(tokenId, index)`, `currentTokenId()`.
-
-The contract is deployed to Etherlink Shadownet using Hardhat and the official RPC, and all agent interactions go through this single entry point.
-
-### 4. Decision engine (new token vs chapter)
-
-**File:** `decideAndActOnPost.js`
-
-`decideAndActOnPost(curated, getLastWorkForHandle, saveNewWorkForHandle, mintNft, addChapter)`
-
-All dependencies are injected (pure function given its inputs). Logic:
-
-1. If `score < 0.6` → **skip** (returns `null`).
-2. If no `LastWork` → **mint**: calls `mintNft(walletAddress, rawText, metadataUri)`, saves new `LastWork` with `chapterCount = 0`.
-3. Else:
-   - Computes Jaccard similarity between `curated.themes` and `LastWork.mainThemes`.
-   - If similarity ≥ threshold and `chapterCount < MAX_CHAPTERS_PER_TOKEN` and `chapterUri` exists → **addChapter**, increments `chapterCount`.
-   - Otherwise → **mint** new token (new "period"), resets `chapterCount = 0`.
-
-Heavily unit‑tested with mocked `mintNft` / `addChapter` to cover skip, mint, chapter, and max‑chapters cases.
-
-### 5. Persistence: identity memory
-
-**Files:** `identityStore.js`, `db/identityDb.js`
-
-SQLite via `better-sqlite3`, single table:
-
-```sql
-CREATE TABLE IF NOT EXISTS works (
-  handle TEXT PRIMARY KEY,
-  lastTokenId INTEGER NOT NULL,
-  mainThemes TEXT NOT NULL,    -- JSON string of string[]
-  chapterCount INTEGER NOT NULL
-);
-```
-
-**Functions:**
-- `getLastWorkForHandle(handle)` — Returns last token id, themes, and chapter count for a given handle, or `null`.
-- `saveNewWorkForHandle(handle, work)` — Upserts `lastTokenId`, `mainThemes`, and `chapterCount` for a handle.
-
-This small "identity memory" is what lets the agent reason over a user's onchain practice (themes + chapters) rather than treating each post as a one‑off.
+---
 
 ## License
 

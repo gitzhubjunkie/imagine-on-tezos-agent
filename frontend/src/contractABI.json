@@ -1,0 +1,11 @@
+[
+  "function currentTokenId() view returns (uint256)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
+  "function tokenURI(uint256 tokenId) view returns (string)",
+  "function promptHash(uint256 tokenId) view returns (bytes32)",
+  "function originalAuthor(uint256 tokenId) view returns (address)",
+  "function getChapterCount(uint256 tokenId) view returns (uint256)",
+  "function getChapter(uint256 tokenId, uint256 index) view returns (string)",
+  "event Minted(uint256 indexed tokenId, address indexed to, bytes32 promptHash)",
+  "event ChapterAdded(uint256 indexed tokenId, string chapterURI)"
+]

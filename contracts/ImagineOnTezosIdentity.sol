@@ -11,11 +11,11 @@ contract ImagineOnTezosIdentity is ERC721, Ownable {
     // tokenId => original author address (e.g. wallet you mint to)
     mapping(uint256 => address) public originalAuthor;
 
+    // tokenId => per-token metadata URI
+    mapping(uint256 => string) private _tokenURIs;
+
     // simple incremental counter
     uint256 private _tokenIdCounter;
-
-    // base URI for metadata
-    string private baseURI;
 
     // --- agent + dynamic chapters ---
 
@@ -31,17 +31,14 @@ contract ImagineOnTezosIdentity is ERC721, Ownable {
 
     constructor(
         string memory _name,
-        string memory _symbol,
-        string memory _baseURI
-    ) ERC721(_name, _symbol) Ownable(msg.sender) {
-        baseURI = _baseURI;
-    }
+        string memory _symbol
+    ) ERC721(_name, _symbol) Ownable(msg.sender) {}
 
     // --- minting ---
 
     function mintTo(
         address to,
-        string calldata tokenURI,   // currently ignored; using baseURI + tokenId
+        string calldata uri,
         bytes32 promptHash_
     ) external onlyOwner {
         uint256 newId = _tokenIdCounter;
@@ -49,20 +46,18 @@ contract ImagineOnTezosIdentity is ERC721, Ownable {
 
         _safeMint(to, newId);
 
+        _tokenURIs[newId] = uri;
         promptHash[newId] = promptHash_;
         originalAuthor[newId] = to;
 
         emit Minted(newId, to, promptHash_);
     }
 
-    // --- baseURI management ---
+    // --- per-token URI ---
 
-    function _baseURI() internal view override returns (string memory) {
-        return baseURI;
-    }
-
-    function setBaseURI(string calldata _baseURI) external onlyOwner {
-        baseURI = _baseURI;
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+        return _tokenURIs[tokenId];
     }
 
     function currentTokenId() external view returns (uint256) {

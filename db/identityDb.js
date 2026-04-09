@@ -12,4 +12,23 @@ CREATE TABLE IF NOT EXISTS works (
 );
 `);
 
+// Evolving identity profile — tracks archetype/sentiment drift over time
+db.exec(`
+CREATE TABLE IF NOT EXISTS identity_profiles (
+  handle TEXT PRIMARY KEY,
+  archetype TEXT,
+  sentiment TEXT,
+  epochState INTEGER NOT NULL DEFAULT 1,
+  narrativeArc TEXT DEFAULT 'origin',
+  archetypeHistory TEXT NOT NULL DEFAULT '[]',
+  sentimentHistory TEXT NOT NULL DEFAULT '[]',
+  resonances TEXT NOT NULL DEFAULT '[]',
+  curatorStatement TEXT,
+  totalMints INTEGER NOT NULL DEFAULT 0,
+  totalChapters INTEGER NOT NULL DEFAULT 0,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+`);
+
 module.exports = { db };

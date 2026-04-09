@@ -8,8 +8,7 @@ async function main() {
   const Imagine = await ethers.getContractFactory("ImagineOnTezosIdentity");
   const contract = await Imagine.deploy(
     "ImagineOnTezosIdentity",
-    "IMAGINE",
-    "https://example.com/metadata/"
+    "IMAGINE"
   );
   await contract.waitForDeployment();
 

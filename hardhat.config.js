@@ -19,5 +19,10 @@ module.exports = {
       chainId: 127823,
       accounts: normalizedEtherlinkKey ? [normalizedEtherlinkKey] : [],
     },
+    "etherlink-mainnet": {
+      url: "https://node.mainnet.etherlink.com",
+      chainId: 42793,
+      accounts: normalizedEtherlinkKey ? [normalizedEtherlinkKey] : [],
+    },
   },
 };

@@ -2,12 +2,12 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const contractAddress = process.argv[2];
-  const tokenId = process.argv[3];
-  const chapterURI = process.argv[4];
+  const contractAddress = process.env.CONTRACT;
+  const tokenId = process.env.TOKEN_ID;
+  const chapterURI = process.env.CHAPTER_URI;
 
   if (!contractAddress || tokenId === undefined || !chapterURI) {
-    console.log("Usage: npx hardhat run scripts/add-chapter.js --network etherlinkShadownet -- <contractAddress> <tokenId> <chapterURI>");
+    console.log("Usage: CONTRACT=0x... TOKEN_ID=0 CHAPTER_URI='ipfs://...' npx hardhat run scripts/add-chapter.js --network etherlink-mainnet");
     process.exit(1);
   }
 

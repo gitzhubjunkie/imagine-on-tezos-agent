@@ -13,8 +13,7 @@ describe("ImagineOnTezosIdentity", function () {
     const Imagine = await ethers.getContractFactory("ImagineOnTezosIdentity");
     contract = await Imagine.deploy(
       "ImagineOnTezosIdentity",
-      "IMAGINE",
-      "https://example.com/metadata/"
+      "IMAGINE"
     );
     await contract.waitForDeployment();
 
@@ -30,8 +29,9 @@ describe("ImagineOnTezosIdentity", function () {
 
   it("mints and stores mappings correctly", async () => {
     const prompt = ethers.keccak256(ethers.toUtf8Bytes("test prompt"));
+    const uri = "https://gateway.pinata.cloud/ipfs/Qm123";
 
-    const tx = await contract.mintTo(addr1.address, "ignored-uri", prompt);
+    const tx = await contract.mintTo(addr1.address, uri, prompt);
     await tx.wait();
 
     // tokenId should start at 0
@@ -44,6 +44,10 @@ describe("ImagineOnTezosIdentity", function () {
     // ownerOf should be addr1
     const nftOwner = await contract.ownerOf(0);
     expect(nftOwner).to.equal(addr1.address);
+
+    // tokenURI should return the per-token URI
+    const storedUri = await contract.tokenURI(0);
+    expect(storedUri).to.equal(uri);
   });
 
   it("only owner can mint", async () => {
@@ -125,8 +129,7 @@ describe("ImagineOnTezosIdentity", function () {
     const Imagine = await ethers.getContractFactory("ImagineOnTezosIdentity");
     const freshContract = await Imagine.deploy(
       "ImagineOnTezosIdentity",
-      "IMAGINE",
-      "https://example.com/metadata/"
+      "IMAGINE"
     );
     await freshContract.waitForDeployment();
 

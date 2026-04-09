@@ -2,12 +2,12 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const contractAddress = process.argv[2];
-  const toAddress = process.argv[3];
-  const promptText = process.argv[4] || "default prompt";
+  const contractAddress = process.env.CONTRACT;
+  const toAddress = process.env.TO;
+  const promptText = process.env.PROMPT || "default prompt";
 
   if (!contractAddress || !toAddress) {
-    console.log("Usage: npx hardhat run scripts/mint.js --network etherlinkShadownet -- <contractAddress> <toAddress> [promptText]");
+    console.log("Usage: CONTRACT=0x... TO=0x... PROMPT='text' npx hardhat run scripts/mint.js --network etherlink-mainnet");
     process.exit(1);
   }
 

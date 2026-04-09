@@ -1,10 +1,17 @@
 {
-  "name": "untitled-folder",
+  "name": "imagine-on-tezos-agent",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI-curated NFT identity gallery on Etherlink",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.js --network etherlink-shadownet",
+    "dress-rehearsal": "node scripts/dress-rehearsal.js",
+    "fake-post": "node scripts/fake-post-runner.js",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "server": "node server.js",
+    "ingest": "node -e \"require('./scheduler').ingestOnce().then(r => { console.log(r); process.exit(); })\""
   },
   "keywords": [],
   "author": "",
@@ -17,7 +24,9 @@
   "dependencies": {
     "axios": "^1.14.0",
     "better-sqlite3": "^12.8.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "form-data": "^4.0.5",
     "openai": "^6.33.0"
   }
