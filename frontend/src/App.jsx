@@ -21,6 +21,16 @@ const ipfs = (u) =>
     ? u.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/")
     : u;
 
+// Route IPFS content through our API proxy (Pinata public gateway blocks HTML)
+const ipfsProxy = (u) => {
+  if (!u) return u;
+  let cid = null;
+  if (u.startsWith("ipfs://")) cid = u.replace("ipfs://", "");
+  else if (u.includes("/ipfs/")) cid = u.split("/ipfs/").pop();
+  if (cid) return `${API_BASE}/api/ipfs/${cid}`;
+  return u;
+};
+
 // ─── API helper ─────────────────────────────────────────
 async function api(path, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -656,11 +666,39 @@ function Card({ token, onSelect, isSelected }) {
 
 // ─── Detail modal ───────────────────────────────────────
 function Detail({ token, onClose }) {
+  const [artifactUrl, setArtifactUrl] = React.useState(null);
+
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Render artifact HTML via our API (bypasses Pinata HTML block)
+  const meta = token?.meta;
+  useEffect(() => {
+    if (!meta?.ai || !meta?.animation_url) return;
+    let cancelled = false;
+    fetch(`${API_BASE}/api/render-artifact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourcePost: meta.sourcePost || {}, ai: meta.ai }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((html) => {
+        if (cancelled) return;
+        const blob = new Blob([html], { type: "text/html" });
+        setArtifactUrl(URL.createObjectURL(blob));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      setArtifactUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    };
+  }, [meta]);
 
   if (!token) return null;
   const t = token;
@@ -674,11 +712,11 @@ function Detail({ token, onClose }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
 
-        {/* Live artifact iframe */}
-        {animUrl && (
+        {/* Live artifact iframe — rendered server-side to bypass Pinata HTML block */}
+        {artifactUrl && (
           <div className="modal-artifact">
             <iframe
-              src={ipfs(animUrl)}
+              src={artifactUrl}
               title="Live artifact"
               sandbox="allow-scripts"
               className="artifact-iframe"
@@ -687,7 +725,7 @@ function Detail({ token, onClose }) {
         )}
 
         {/* Preview image (if no animation) */}
-        {!animUrl && t.meta?.image ? (
+        {!artifactUrl && t.meta?.image ? (
           tweetData ? (
             <TweetCard tweet={tweetData} />
           ) : (

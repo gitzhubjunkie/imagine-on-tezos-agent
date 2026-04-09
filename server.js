@@ -28,6 +28,86 @@ app.get("/api/health", async (_req, res) => {
   await res.json({ ok: true });
 });
 
+// ── IPFS proxy (Pinata public gateway blocks HTML) ──────
+// GET /api/ipfs/:cid — fetch IPFS content and serve it directly
+app.get("/api/ipfs/:cid", async (req, res) => {
+  try {
+    const cid = req.params.cid;
+    if (!/^Qm[1-9A-HJ-NP-Za-km-z]{44}$|^bafy[a-z2-7]{55}$/.test(cid)) {
+      res.status(400).json({ error: "Invalid IPFS CID" });
+      return;
+    }
+    // Try multiple IPFS gateways — Pinata blocks HTML on free tier
+    const gateways = [
+      `https://ipfs.io/ipfs/${cid}`,
+      `https://cloudflare-ipfs.com/ipfs/${cid}`,
+      `https://dweb.link/ipfs/${cid}`,
+    ];
+    let lastErr;
+    for (const gateway of gateways) {
+      try {
+        const resp = await fetch(gateway, { signal: AbortSignal.timeout(8000) });
+        if (!resp.ok) { lastErr = new Error(`${resp.status}`); continue; }
+        const contentType = resp.headers.get("content-type") || "application/octet-stream";
+        res.setHeader("Content-Type", contentType);
+        const buffer = Buffer.from(await resp.arrayBuffer());
+        return res.send(buffer);
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("All gateways failed");
+  } catch (err) {
+    console.error("ipfs-proxy error:", err.message);
+    res.status(502).json({ error: "Failed to fetch from IPFS" });
+  }
+});
+
+// ── Artifact renderer endpoint ──────────────────────────
+// GET /api/artifact/:cid — fetch metadata from IPFS, regenerate the HTML artifact
+app.get("/api/artifact/:cid", async (req, res) => {
+  try {
+    const cid = req.params.cid;
+    if (!/^Qm[1-9A-HJ-NP-Za-km-z]{44}$|^bafy[a-z2-7]{55}$/.test(cid)) {
+      res.status(400).json({ error: "Invalid IPFS CID" });
+      return;
+    }
+    // Fetch the NFT metadata JSON from IPFS to get sourcePost + ai fields
+    const gateways = [
+      `https://ipfs.io/ipfs/${cid}`,
+      `https://cloudflare-ipfs.com/ipfs/${cid}`,
+      `https://dweb.link/ipfs/${cid}`,
+    ];
+    let meta;
+    for (const gw of gateways) {
+      try {
+        const r = await fetch(gw, { signal: AbortSignal.timeout(8000) });
+        if (r.ok) { meta = await r.json(); break; }
+      } catch {}
+    }
+    if (!meta) { res.status(502).json({ error: "Could not fetch metadata" }); return; }
+    const html = renderArtifactHtml({ sourcePost: meta.sourcePost, ai: meta.ai });
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (err) {
+    console.error("artifact error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Artifact from inline metadata ───────────────────────
+// POST /api/render-artifact  { sourcePost: {...}, ai: {...} }
+app.post("/api/render-artifact", async (req, res) => {
+  try {
+    const { sourcePost, ai } = req.body;
+    if (!ai) { res.status(400).json({ error: "ai data required" }); return; }
+    const html = renderArtifactHtml({ sourcePost: sourcePost || {}, ai });
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (err) {
+    console.error("render-artifact error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Resolve tweet ───────────────────────────────────────
 // POST /api/resolve-tweet  { tweetUrl: "https://x.com/.../status/123" }
 // or                       { tweetId: "123" }
